@@ -328,3 +328,11 @@ Bundled third-party components and their licenses are listed in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). No files from Windows, Explorer
 or any third-party application are redistributed; the Recycle Bin icon is read
 from the system at runtime.
+
+## 🔗 See also
+
+**[Files Companion](https://github.com/Dannyzzy/Files-Companion)** — brings the
+startup animation back to the [Files](https://github.com/files-community/Files)
+file manager and routes folders, drives, "This PC" and `Win+E` through it. Its
+installer can set up this Recycle Bin for you in the same pass, so the two work
+as one set.
