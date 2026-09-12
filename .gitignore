@@ -1,0 +1,7 @@
+dist/
+build/
+*.log
+Thumbs.db
+desktop.ini
+.vs/
+*.user

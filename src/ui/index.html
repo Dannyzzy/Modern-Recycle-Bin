@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>回收站</title>
+<style>
+  /* ------------------------------------------------------------------
+     Windows 11 / Files palette and metrics.
+     Measured from Files: 40 px rows, 14 px body text, secondary columns
+     differ only by colour (not size), a dim header with a sort arrow,
+     4 px radii, no grid lines. The right hand pane follows the Explorer /
+     Files details pane.
+     ------------------------------------------------------------------ */
+  :root {
+    /* Light-feeling graphite. Two knobs were tuned here: blue shift (B-R) is now
+       5-7, and every layer was lifted ~8 levels so it reads as a soft light grey
+       rather than a deep blue-black. Lightness is changed together with colour -
+       dropping the blue channel alone just makes it look muddy. */
+    --surface:  #2f3134;
+    --layer:    #292b2e;
+    --field:    #35373b;
+    --card:     #36383c;
+    --hover:    rgba(255,255,255,.068);
+    --select:   #404347;
+    --pressed:  rgba(255,255,255,.11);
+    --line:     #3d3f44;
+    --line-soft:#383a3e;
+    --ink:      #eceff2;
+    --ink-2:    #c6c9cd;
+    --ink-dim:  #9a9da1;
+    --accent:   #ff8a3d;
+    --radius:   6px;
+    --pill:     999px;
+    --row:      40px;
+    --fs:       14px;
+    /* Fluent motion: fast, decelerating, never bouncy. */
+    --ease:     cubic-bezier(.1, .9, .2, 1);
+    --dur:      .17s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+  body[data-density="compact"] { --row: 30px; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+    font-size: var(--fs);
+    overflow: hidden;
+    user-select: none;
+    cursor: default;
+  }
+  .glyph { font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets"; }
+
+  .app {
+    display: flex; flex-direction: column; height: 100%; position: relative;
+    animation: appIn .24s var(--ease) both;
+  }
+  @keyframes appIn { from { opacity: 0 } to { opacity: 1 } }
+
+  /* ---------------------------------------------------- breadcrumb */
+  .crumb {
+    height: 44px; flex: 0 0 44px;
+    display: flex; align-items: center; gap: 10px; padding: 0 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .crumb .home { font-size: 15px; color: var(--ink-dim); }
+  .crumb .sep  { color: var(--ink-dim); opacity: .7; }
+  .crumb .spacer { flex: 1; }
+
+  /* Files renders the search field as a border-less pill: the rounded ends and
+     the absence of a 1 px outline are what keep it from looking rigid. */
+  .search {
+    display: flex; align-items: center;
+    height: 32px; width: 240px; padding: 0 14px; gap: 8px;
+    background: var(--field);
+    border: 1px solid transparent;
+    border-radius: var(--pill);
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .search:hover { background: #3d4045; }
+  .search:focus-within { background: #3d4045; border-color: #64676c; }
+  .search .glyph { font-size: 14px; color: var(--ink-dim); }
+  .search input {
+    flex: 1; border: 0; outline: 0; background: transparent;
+    color: var(--ink); font: inherit; font-size: 13px; min-width: 0;
+  }
+  .search input::placeholder { color: var(--ink-dim); }
+
+  /* ------------------------------------------------- command bar */
+  .cmd {
+    height: 48px; flex: 0 0 48px;
+    display: flex; align-items: center; gap: 4px; padding: 0 12px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .btn {
+    display: flex; align-items: center; gap: 8px;
+    height: 34px; padding: 0 13px;
+    border: 0; border-radius: 8px;
+    background: transparent; color: var(--ink);
+    font: inherit; cursor: default; white-space: nowrap;
+    transition: background var(--dur) var(--ease), transform .08s var(--ease);
+  }
+  .btn:hover  { background: var(--hover); }
+  .btn:active { background: var(--pressed); transform: scale(.975); }
+  .btn:disabled { color: var(--ink-dim); opacity: .45; }
+  .btn .glyph { font-size: 16px; color: var(--ink-2); }
+  .btn.icon { padding: 0 9px; }
+  .sep-v { width: 1px; height: 18px; background: var(--line); margin: 0 6px; }
+  .cmd .spacer { flex: 1; }
+
+  /* Custom pill plus our own menu: a native <select> popup is drawn by the OS
+     with square corners and a light theme, and CSS cannot touch it. */
+  .btn.pill {
+    background: var(--field); border-radius: 999px;
+    padding: 0 15px; height: 34px; margin-left: 4px;
+  }
+  .btn.pill:hover { background: #3d4045; }
+  .btn .chev { font-size: 10px; color: var(--ink-dim); margin-left: -2px; }
+  .btn.on { background: rgba(255,255,255,.09); }
+  .btn.on .glyph { color: var(--ink); }
+
+  /* Thin outlined magnifier, drawn rather than taken from an icon font: the
+     font glyph is optically heavier and looks blunt next to the text. */
+  .mag { flex: 0 0 auto; color: var(--ink-dim); }
+
+  /* ------------------------------------------------------ header */
+  .head {
+    height: 36px; flex: 0 0 36px;
+    display: grid; align-items: center; padding: 0 16px; gap: 8px;
+    color: var(--ink-dim); font-size: 13px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .head .col { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .head .col:hover { color: var(--ink-2); }
+  .head .sorted { color: var(--ink); }
+
+  /* -------------------------------------------------------- body */
+  .body { flex: 1; display: flex; min-height: 0; }
+
+  .list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 8px 8px; min-width: 0; }
+  .list::-webkit-scrollbar, .details::-webkit-scrollbar { width: 12px; }
+  .list::-webkit-scrollbar-thumb, .details::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.22);
+    border: 4px solid transparent; border-radius: 8px; background-clip: content-box;
+  }
+  .list::-webkit-scrollbar-thumb:hover, .details::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,.35); background-clip: content-box;
+  }
+
+  .row {
+    display: grid; align-items: center; gap: 8px;
+    height: var(--row); padding: 0 10px;
+    border-radius: 8px; overflow: hidden;
+    transition: background .12s var(--ease), box-shadow .12s var(--ease);
+  }
+  .row:hover    { background: var(--hover); }
+  .row.selected { background: var(--select); }
+  .row .cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .row .name { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+  .row .name img { width: 20px; height: 20px; flex: 0 0 20px; }
+  /* placeholder when the shell could not produce an icon for a row */
+  .row .name .iconph {
+    width: 20px; height: 20px; flex: 0 0 20px;
+    border-radius: 5px; background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.09);
+  }
+  .row .dim { color: var(--ink-dim); }
+  .row .right { text-align: right; }
+  body[data-density="compact"] .row .name img { width: 16px; height: 16px; flex: 0 0 16px; }
+
+  .row .chk { display: flex; align-items: center; justify-content: center; }
+  .row .chk input { width: 16px; height: 16px; accent-color: var(--accent); pointer-events: none; }
+
+  /* Rows rise into place on the first paint only, so the window feels alive
+     instead of snapping into existence. Later renders must not re-animate. */
+  .row.anim { animation: rowIn .2s var(--ease) both; }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(7px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* Skeleton rows while the host enumerates the bin: the wait reads as progress
+     rather than a blank stall. */
+  .skel-row { display: flex; align-items: center; gap: 12px; height: var(--row); padding: 0 10px; }
+  .skel {
+    height: 11px; border-radius: 6px;
+    background: linear-gradient(90deg, #31343a 25%, #3d4047 50%, #31343a 75%);
+    background-size: 220% 100%;
+    animation: shimmer 1.15s linear infinite;
+  }
+  .skel.icon { width: 20px; height: 20px; border-radius: 5px; flex: 0 0 20px; }
+  @keyframes shimmer { from { background-position: 220% 0 } to { background-position: -220% 0 } }
+
+  /* ------------------------------------------------ details pane */
+  .details {
+    width: 292px; flex: 0 0 292px;
+    border-left: 1px solid var(--line-soft);
+    background: var(--surface);
+    overflow-y: auto; padding: 18px 18px 16px;
+    animation: paneIn .2s var(--ease) both;
+  }
+  @keyframes paneIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .details.hidden { display: none; }
+  .d-hint { color: var(--ink-dim); font-size: 13px; text-align: center; margin-top: 40px; }
+  .d-preview {
+    height: 200px; border-radius: 8px; background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; margin-bottom: 14px;
+  }
+  .d-preview img { max-width: 100%; max-height: 100%; }
+  .d-preview img.icon { width: 96px; height: 96px; }
+  .d-loading { color: var(--ink-dim); font-size: 13px; }
+  .d-name { font-size: 15px; color: var(--ink); word-break: break-all; margin-bottom: 14px; line-height: 1.35; }
+  .d-rows { display: flex; flex-direction: column; gap: 9px; }
+  .d-rows > div { display: flex; gap: 10px; font-size: 13px; }
+  .d-rows span { color: var(--ink-dim); flex: 0 0 62px; }
+  .d-rows b { color: var(--ink-2); font-weight: 400; flex: 1; word-break: break-all; }
+  /* Action list styled exactly like the command bar above - icon + label,
+     transparent until hovered. Flat filled blocks are the Windows 10 look. */
+  .d-actions { display: flex; flex-direction: column; gap: 2px; margin-top: 18px; }
+  .d-actions button {
+    display: flex; align-items: center; gap: 10px;
+    height: 36px; border: 0; border-radius: 8px;
+    background: transparent; color: var(--ink);
+    font: inherit; font-size: 13px; cursor: default; text-align: left; padding: 0 10px;
+    transition: background var(--dur) var(--ease), transform .08s var(--ease);
+  }
+  .d-actions button:hover { background: var(--hover); }
+  .d-actions button:active { background: var(--pressed); transform: scale(.985); }
+  .d-actions button svg { flex: 0 0 16px; color: var(--ink-dim); }
+  .d-actions button.danger { color: #ff9a8a; }
+  .d-actions button.danger svg { color: #ff9a8a; }
+
+  /* -------------------------------------------------- empty state */
+  .empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; color: var(--ink-dim);
+  }
+  .empty img { width: 96px; height: 96px; }
+  .hidden { display: none !important; }
+
+  /* ------------------------------------------------------- status */
+  .status {
+    height: 30px; flex: 0 0 30px;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 16px; font-size: 12px; color: var(--ink-dim);
+    border-top: 1px solid var(--line-soft);
+  }
+  .status .spacer { flex: 1; }
+
+  /* -------------------------------------------------- context menu */
+  /* Dropdowns float in a soft glass layer: generous one-per-row items, a big
+     radius, and a real backdrop blur so the list behind shows through slightly.
+     Kept restrained on purpose - heavy glass reads as gimmicky. */
+  .menu {
+    position: fixed; min-width: 236px; padding: 6px;
+    background: rgba(41, 43, 46, .80);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
+    backdrop-filter: blur(28px) saturate(130%);
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 12px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .52), 0 2px 10px rgba(0, 0, 0, .34);
+    font-size: 14px; z-index: 50;
+    overflow: hidden;
+    /* grows out of the button that opened it, rather than popping into place */
+    transform-origin: top left;
+    animation: menuIn .17s var(--ease) both;
+  }
+  @keyframes menuIn {
+    from { opacity: 0; transform: scale(.94) translateY(-8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .menu.closing { animation: menuOut .13s var(--ease) both; }
+  @keyframes menuOut {
+    from { opacity: 1; transform: none; }
+    to   { opacity: 0; transform: scale(.97) translateY(-5px); }
+  }
+  .menu .item {
+    display: flex; align-items: center; gap: 10px;
+    height: 38px; padding: 0 12px; border-radius: 8px;
+    transition: background var(--dur) var(--ease);
+  }
+  .menu .item + .item { margin-top: 2px; }
+  .menu .item:hover { background: rgba(255, 255, 255, .085); }
+  .menu .item .glyph { font-size: 15px; color: var(--ink-2); width: 18px; }
+  .menu .item .lbl { flex: 1; }
+  .menu .item .hint {
+    color: var(--ink-dim); font-size: 12px;
+    background: rgba(255, 255, 255, .07);
+    border-radius: 999px; padding: 1px 8px; min-width: 26px; text-align: center;
+  }
+  .menu .line { height: 1px; background: rgba(255,255,255,.09); margin: 6px 8px; }
+</style>
+</head>
+<body data-density="comfortable">
+<div class="app">
+  <div class="crumb">
+    <span class="glyph home">&#xE80F;</span>
+    <span class="sep">&#x203A;</span>
+    <span>回收站</span>
+    <span class="spacer"></span>
+    <label class="search">
+      <svg class="mag" viewBox="0 0 16 16" width="15" height="15" fill="none"
+           stroke="currentColor" stroke-width="1.45" stroke-linecap="round">
+        <circle cx="6.9" cy="6.9" r="4.5"/>
+        <path d="M10.3 10.3 L14 14"/>
+      </svg>
+      <input id="q" type="text" placeholder="搜索名称、原位置或类型" spellcheck="false">
+    </label>
+  </div>
+
+  <div class="cmd">
+    <button class="btn" data-act="empty"><span class="glyph">&#xE74D;</span>清空回收站</button>
+    <button class="btn" data-act="restoreAll"><span class="glyph">&#xE845;</span>还原所有项目</button>
+    <button class="btn" data-act="restore"><span class="glyph">&#xE7A7;</span>还原</button>
+    <button class="btn" data-act="restoreTo"><span class="glyph">&#xE8DE;</span>还原到…</button>
+    <button class="btn" data-act="copyTo"><span class="glyph">&#xE8C8;</span>复制到…</button>
+    <button class="btn" data-act="delete"><span class="glyph">&#xE74D;</span>删除</button>
+    <span class="sep-v"></span>
+    <button class="btn icon" id="btnSort" title="排序方式"><span class="glyph">&#xE8CB;</span></button>
+    <button class="btn icon" id="btnView" title="查看"><span class="glyph">&#xE890;</span></button>
+    <button class="btn icon" data-act="refresh" title="刷新 (F5)"><span class="glyph">&#xE72C;</span></button>
+    <button class="btn pill" id="btnType" title="按类型筛选">
+      <span id="typeLabel">全部类型</span><span class="chev">&#x25BE;</span>
+    </button>
+    <button class="btn" id="btnDetails" title="显示 / 隐藏详细信息窗格">详细信息</button>
+    <span class="spacer"></span>
+    <button class="btn icon" data-act="files" title="用 Files 打开回收站"><span class="glyph">&#xE8A7;</span></button>
+    <button class="btn icon" data-act="explorer" title="用资源管理器打开回收站"><span class="glyph">&#xE8B7;</span></button>
+  </div>
+
+  <div class="head" id="head"></div>
+
+  <div class="body">
+    <div class="list" id="list"></div>
+    <div class="empty hidden" id="empty">
+      <img id="emptyIcon" alt="">
+      <div>回收站为空</div>
+    </div>
+    <aside class="details" id="details"></aside>
+  </div>
+
+  <div class="status">
+    <span id="count"></span>
+    <span class="spacer"></span>
+    <span id="sel"></span>
+  </div>
+</div>
+
+<script>
+  /* Percentages summing under 100% (leaving room for the grid gaps) so no column
+     can be pushed past the right edge at any window size or DPI. */
+  const COLS = [
+    { key: 'name',     label: '名称',     w: '22%' },
+    { key: 'original', label: '原位置',   w: '24%' },
+    { key: 'deleted',  label: '删除日期', w: '16%' },
+    { key: 'modified', label: '修改日期', w: '15%' },
+    { key: 'type',     label: '类型',     w: '11%' },
+    { key: 'size',     label: '大小',     w: '8%', right: true }
+  ];
+
+  const KIND = {
+    image:  ['png','jpg','jpeg','gif','bmp','webp','ico','svg','tif','tiff','heic','raw'],
+    video:  ['mp4','mkv','avi','mov','wmv','flv','webm','m4v','mpg','mpeg'],
+    audio:  ['mp3','wav','flac','aac','ogg','m4a','wma','opus'],
+    doc:    ['txt','md','doc','docx','pdf','xls','xlsx','ppt','pptx','rtf','csv','odt','one'],
+    archive:['zip','rar','7z','tar','gz','bz2','xz','iso','cab'],
+    code:   ['ps1','psm1','bat','cmd','py','js','ts','json','xml','yml','yaml','html','css','c','cpp','h','cs','java','sh','sql','ini','toml']
+  };
+  const kindOf = it => {
+    if (it.isDir) return 'folder';
+    const ext = (it.name.split('.').pop() || '').toLowerCase();
+    for (const k in KIND) if (KIND[k].indexOf(ext) >= 0) return k;
+    return 'other';
+  };
+
+  let items = [], view = [], selected = new Set();
+  let anchor = -1, sortKey = 'deleted', sortAsc = false, filter = '', kindFilter = '';
+  let loaded = false;         // false until the first items payload arrives
+  let animateRows = false;    // stagger the first paint only
+
+  const SKELETON = new Array(12).join().split(',').map(() =>
+    `<div class="skel-row"><span class="skel icon"></span>
+       <span class="skel" style="width:21%"></span>
+       <span class="skel" style="width:24%"></span>
+       <span class="skel" style="width:15%"></span>
+       <span class="skel" style="width:14%"></span>
+       <span class="skel" style="width:9%"></span>
+     </div>`).join('');
+  let showDetails = true, showCheckboxes = false;
+  let conflictMode = 'replace';   // replace | skip | keepboth
+
+  /* Image-only thumbnail preview, fetched lazily for the single selected row.
+     Deliberately not used for video: a poster frame was not wanted. */
+  let previewPath = '', previewData = '', previewState = 'none', previewItem = null;
+
+  const $ = id => document.getElementById(id);
+  const post = msg => window.chrome.webview.postMessage(msg);
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const fmt = b => {
+    const u = ['B','KB','MB','GB','TB']; let v = b, i = 0;
+    while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+    return i === 0 ? b + ' B' : v.toFixed(v < 10 ? 2 : 1) + ' ' + u[i];
+  };
+  const gridCols = () => (showCheckboxes ? '22px ' : '') + COLS.map(c => c.w).join(' ');
+
+  /* Thin outlined icons, matching the SVG magnifier in the search field - the
+     icon-font glyphs are optically heavier and read as a different era. */
+  const svg = d => `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor"
+      stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const ICON = {
+    restore:     svg('<path d="M3 8h7.5a3.2 3.2 0 0 1 0 6.4H6.5"/><path d="M6 4.6 3 8l3 3.4"/>'),
+    folderArrow: svg('<path d="M2 5.6A1.6 1.6 0 0 1 3.6 4h3l1.5 2h4.3A1.6 1.6 0 0 1 14 7.6v3.8A1.6 1.6 0 0 1 12.4 13H3.6A1.6 1.6 0 0 1 2 11.4z"/><path d="M8 8v3.1"/><path d="M6.6 9.8 8 11.2l1.4-1.4"/>'),
+    copy:        svg('<rect x="5.4" y="2.4" width="7.2" height="8.4" rx="1.6"/><path d="M10.6 13.6H4.4a1.6 1.6 0 0 1-1.6-1.6V5.4"/>'),
+    folderOpen:  svg('<path d="M2 5.6A1.6 1.6 0 0 1 3.6 4h3l1.5 2h4.3A1.6 1.6 0 0 1 14 7.6v3.8A1.6 1.6 0 0 1 12.4 13H3.6A1.6 1.6 0 0 1 2 11.4z"/><path d="M2.6 10.4h10.8"/>'),
+    info:        svg('<circle cx="8" cy="8" r="5.6"/><path d="M8 7.4v3.4"/><path d="M8 5.3h.01"/>'),
+    trash:       svg('<path d="M2.8 4.6h10.4"/><path d="M6.5 4.6V3.2h3v1.4"/><path d="M4.4 4.6l.7 8.1h5.8l.7-8.1"/>')
+  };
+
+  /* ---------------------------------------------------------- header */
+  function renderHead() {
+    const h = $('head');
+    h.style.gridTemplateColumns = gridCols();
+    h.innerHTML = (showCheckboxes ? '<div class="col"></div>' : '') + COLS.map(c => {
+      const cls = 'col' + (c.key === sortKey ? ' sorted' : '');
+      const arrow = c.key === sortKey ? (sortAsc ? '  ▲' : '  ▼') : '';
+      const right = c.right ? ' style="text-align:right"' : '';
+      return `<div class="${cls}" data-key="${c.key}"${right}>${c.label}${arrow}</div>`;
+    }).join('');
+    h.querySelectorAll('.col').forEach(el => el.onclick = () => {
+      const k = el.dataset.key;
+      if (sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = true; }
+      render();
+    });
+  }
+
+  /* ------------------------------------------------------------ list */
+  function applyFilterSort() {
+    const f = filter.toLowerCase();
+    view = items.filter(it => {
+      if (kindFilter && kindOf(it) !== kindFilter) return false;
+      if (!f) return true;
+      return (it.name || '').toLowerCase().includes(f)
+          || (it.original || '').toLowerCase().includes(f)
+          || (it.type || '').toLowerCase().includes(f);
+    });
+
+    const dir = sortAsc ? 1 : -1;
+    view.sort((a, b) => {
+      let r;
+      if (sortKey === 'size') r = (a.bytes || 0) - (b.bytes || 0);
+      else if (sortKey === 'deleted') r = (a.deletedTs || 0) - (b.deletedTs || 0);
+      else if (sortKey === 'modified') r = (a.modifiedTs || 0) - (b.modifiedTs || 0);
+      else r = String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''), 'zh');
+      return r * dir;
+    });
+  }
+
+  function render() {
+    applyFilterSort();
+    renderHead();
+
+    const list = $('list');
+
+    if (!loaded) {
+      list.classList.remove('hidden');
+      $('empty').classList.add('hidden');
+      $('details').classList.toggle('hidden', !showDetails);
+      $('details').innerHTML = '<div class="d-hint">正在读取回收站…</div>';
+      list.innerHTML = SKELETON;
+      $('count').textContent = '正在读取…';
+      $('sel').textContent = '';
+      return;
+    }
+
+    if (items.length === 0) {
+      list.innerHTML = '';
+      list.classList.add('hidden');
+      $('empty').classList.remove('hidden');
+      $('details').classList.add('hidden');
+      $('count').textContent = '回收站为空';
+      $('sel').textContent = '';
+      return;
+    }
+    list.classList.remove('hidden');
+    $('empty').classList.add('hidden');
+    $('details').classList.toggle('hidden', !showDetails);
+    $('btnDetails').classList.toggle('on', showDetails);
+
+    const grid = gridCols();
+    list.innerHTML = view.map((it, idx) => {
+      const on = selected.has(it.path);
+      const chk = showCheckboxes
+        ? `<div class="cell chk"><input type="checkbox"${on ? ' checked' : ''}></div>` : '';
+      const cls = 'row' + (on ? ' selected' : '') + (animateRows ? ' anim' : '');
+      const style = `grid-template-columns:${grid}`
+        + (animateRows ? `;animation-delay:${Math.min(idx, 12) * 22}ms` : '');
+      return `<div class="${cls}"
+        data-path="${encodeURIComponent(it.path)}" style="${style}">
+        ${chk}
+        <div class="cell name">${it.icon ? `<img src="${it.icon}" alt="">` : '<span class="iconph"></span>'}${esc(it.name)}</div>
+        <div class="cell dim">${esc(it.original)}</div>
+        <div class="cell dim">${esc(it.deleted)}</div>
+        <div class="cell dim">${esc(it.modified)}</div>
+        <div class="cell dim">${esc(it.type)}</div>
+        <div class="cell dim right">${esc(it.size)}</div>
+      </div>`;
+    }).join('');
+    animateRows = false;   // only the first paint staggers
+
+    list.querySelectorAll('.row').forEach(el => {
+      const p = decodeURIComponent(el.dataset.path);
+      el.onmousedown = e => onRowDown(e, p);
+      el.ondblclick  = () => post({ cmd: 'restore', paths: [p] });
+      el.oncontextmenu = e => {
+        e.preventDefault();
+        if (!selected.has(p)) { selected.clear(); selected.add(p); anchor = view.findIndex(v => v.path === p); render(); }
+        showItemMenu(e.clientX, e.clientY);
+      };
+    });
+
+    const totalBytes = items.reduce((s, i) => s + (i.bytes || 0), 0);
+    const selItems = items.filter(i => selected.has(i.path));
+    const selBytes = selItems.reduce((s, i) => s + (i.bytes || 0), 0);
+
+    $('count').textContent = (filter || kindFilter)
+      ? `筛选出 ${view.length} / ${items.length} 个项目`
+      : `${items.length} 个项目  ${fmt(totalBytes)}`;
+    $('sel').textContent = selected.size ? `已选择 ${selected.size} 项  ${fmt(selBytes)}` : '';
+
+    renderDetails(selItems, selBytes);
+  }
+
+  function renderDetails(selItems, selBytes) {
+    const d = $('details');
+    if (!showDetails) return;
+
+    if (selItems.length === 0) {
+      d.innerHTML = '<div class="d-hint">选择一个项目查看详细信息</div>';
+      return;
+    }
+    if (selItems.length > 1) {
+      d.innerHTML = `<div class="d-preview"><img class="icon" src="${selItems[0].icon || ''}"></div>
+        <div class="d-name">已选择 ${selItems.length} 个项目</div>
+        <div class="d-rows"><div><span>合计大小</span><b>${fmt(selBytes)}</b></div></div>`;
+      return;
+    }
+
+    const it = selItems[0];
+    d.innerHTML = `
+      <div class="d-preview">${it.icon ? `<img class="icon" src="${it.icon}" alt="">` : '<span class="d-loading">无图标</span>'}</div>
+      <div class="d-name">${esc(it.name)}</div>
+      <div class="d-rows">
+        <div><span>类型</span><b>${esc(it.type || '—')}</b></div>
+        <div><span>大小</span><b>${esc(it.size || '—')}</b></div>
+        <div><span>原位置</span><b>${esc(it.original || '—')}</b></div>
+        <div><span>删除时间</span><b>${esc(it.deleted || '—')}</b></div>
+        <div><span>修改时间</span><b>${esc(it.modified || '—')}</b></div>
+      </div>
+      <div class="d-actions">
+        <button data-a="restore">${ICON.restore}还原到原位置</button>
+        <button data-a="restoreTo">${ICON.folderArrow}还原到…</button>
+        <button data-a="copyTo">${ICON.copy}复制到…</button>
+        <button data-a="openLocation">${ICON.folderOpen}打开原位置</button>
+        <button data-a="props">${ICON.info}属性</button>
+        <button data-a="delete" class="danger">${ICON.trash}永久删除</button>
+      </div>`;
+
+    d.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const a = b.dataset.a, paths = [...selected];
+      if (a === 'restore') post({ cmd: 'restore', paths });
+      else if (a === 'restoreTo') post({ cmd: 'restoreTo', paths, mode: conflictMode });
+      else if (a === 'copyTo') post({ cmd: 'copyTo', paths });
+      else if (a === 'openLocation') post({ cmd: 'openLocation', paths });
+      else if (a === 'props') post({ cmd: 'props', paths });
+      else if (a === 'delete') post({ cmd: 'delete', paths });
+    });
+
+    previewItem = it;
+    if (kindOf(it) !== 'image') {
+      // icons only - no video frames, no black letterboxing
+      previewPath = ''; previewData = ''; previewState = 'none';
+    } else if (it.path !== previewPath) {
+      previewPath = it.path;
+      previewData = '';
+      previewState = 'loading';
+      post({ cmd: 'preview', path: it.path });
+    }
+    applyPreview();
+  }
+
+  function applyPreview() {
+    const el = document.querySelector('.d-preview');
+    if (!el || !previewItem) return;
+    if (previewData) el.innerHTML = `<img src="${previewData}" alt="">`;
+    else if (previewState === 'loading') el.innerHTML = '<span class="d-loading">正在生成预览…</span>';
+    else el.innerHTML = `<img class="icon" src="${previewItem.icon || ''}" alt="">`;
+  }
+
+  function onRowDown(e, path) {
+    const idx = view.findIndex(v => v.path === path);
+    if (idx < 0) return;
+    if (e.shiftKey && anchor >= 0) {
+      const a = Math.min(anchor, idx), b = Math.max(anchor, idx);
+      if (!e.ctrlKey) selected.clear();
+      for (let i = a; i <= b; i++) selected.add(view[i].path);
+    } else if (e.ctrlKey) {
+      selected.has(path) ? selected.delete(path) : selected.add(path);
+      anchor = idx;
+    } else {
+      selected.clear(); selected.add(path); anchor = idx;
+    }
+    render();
+  }
+
+  /* -------------------------------------------------------- menus */
+  let openMenu = null, openOwner = null;
+  function closeMenu() {
+    if (!openMenu) { openOwner = null; return; }
+    const m = openMenu;
+    openMenu = null; openOwner = null;
+    m.classList.add('closing');            // plays the exit animation before removal
+    setTimeout(() => m.remove(), 140);
+  }
+
+  function menu(x, y, rows, owner) {
+    // Clicking the button that opened the menu closes it, rather than reopening.
+    if (owner && openOwner === owner) { closeMenu(); return; }
+    closeMenu();
+
+    const m = document.createElement('div');
+    m.className = 'menu';
+    m.innerHTML = rows.map(r => r.line
+      ? '<div class="line"></div>'
+      : `<div class="item" data-id="${r.id}">
+           <span class="glyph">${r.on ? '&#xE73E;' : (r.icon || '')}</span>
+           <span class="lbl">${r.label}</span>${r.hint ? `<span class="hint">${r.hint}</span>` : ''}
+         </div>`).join('');
+    document.body.appendChild(m);
+    m.style.left = Math.min(x, innerWidth - m.offsetWidth - 8) + 'px';
+    m.style.top  = Math.min(y, innerHeight - m.offsetHeight - 8) + 'px';
+
+    // grow out of the control that owns the flyout, like a Fluent flyout
+    if (owner) {
+      const r = owner.getBoundingClientRect();
+      m.style.transformOrigin = (x <= r.left + r.width / 2) ? 'top left' : 'top right';
+    }
+
+    m.querySelectorAll('.item').forEach(el => el.onclick = () => {
+      const row = rows.find(r => r.id === el.dataset.id);
+      closeMenu();
+      if (row && row.run) row.run();
+    });
+    openMenu = m;
+    openOwner = owner || null;
+  }
+
+  // Clicks on the owning button are handled by its own onclick (toggle), so this
+  // outside-close listener must not consume them first.
+  document.addEventListener('mousedown', e => {
+    if (e.target.closest('.menu')) return;
+    if (openOwner && openOwner.contains(e.target)) return;
+    closeMenu();
+  }, true);
+
+  function showItemMenu(x, y) {
+    const paths = [...selected];
+    menu(x, y, [
+      { id: 'restore',   icon: '&#xE7A7', label: '还原到原位置', hint: 'Enter', run: () => post({ cmd: 'restore', paths }) },
+      { id: 'restoreTo', icon: '&#xE8DE', label: '还原到…', run: () => post({ cmd: 'restoreTo', paths, mode: conflictMode }) },
+      { id: 'copyTo',    icon: '&#xE8C8', label: '复制到…', run: () => post({ cmd: 'copyTo', paths }) },
+      { id: 'openloc',   icon: '&#xE838', label: '打开原位置', run: () => post({ cmd: 'openLocation', paths }) },
+      { id: 'l1', line: true },
+      { id: 'props',     icon: '&#xE946', label: '属性', run: () => post({ cmd: 'props', paths }) },
+      { id: 'copyPath',  icon: '&#xE8C8', label: '复制原位置路径', run: () => post({ cmd: 'copyPath', paths }) },
+      { id: 'l2', line: true },
+      { id: 'delete',    icon: '&#xE74D', label: '永久删除', hint: 'Delete', run: () => post({ cmd: 'delete', paths }) }
+    ]);
+  }
+
+  $('btnSort').onclick = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    menu(r.left, r.bottom + 6, COLS.map(c => ({
+      id: 'sort-' + c.key, label: c.label, icon: '&#xE8CB',
+      on: sortKey === c.key, hint: sortKey === c.key ? (sortAsc ? '升序' : '降序') : '',
+      run: () => { if (sortKey === c.key) sortAsc = !sortAsc; else { sortKey = c.key; sortAsc = true; } render(); }
+    })), e.currentTarget);
+  };
+
+  $('btnView').onclick = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const cur = document.body.dataset.density;
+    menu(r.left, r.bottom + 6, [
+      { id: 'v1', label: '舒适', icon: '&#xE890', on: cur === 'comfortable',
+        run: () => { document.body.dataset.density = 'comfortable'; } },
+      { id: 'v2', label: '紧凑', icon: '&#xE8A1', on: cur === 'compact',
+        run: () => { document.body.dataset.density = 'compact'; } },
+      { id: 'v3', label: '选择框', icon: '&#xE73A;', on: showCheckboxes,
+        run: () => { showCheckboxes = !showCheckboxes; save(); render(); } },
+      { id: 'v4', label: '详细信息窗格', icon: '&#xE8A0', on: showDetails,
+        run: () => { showDetails = !showDetails; save(); render(); } },
+      { id: 'l1', line: true },
+      { id: 'c1', label: '同名时覆盖', on: conflictMode === 'replace',
+        run: () => { conflictMode = 'replace'; } },
+      { id: 'c2', label: '同名时跳过', on: conflictMode === 'skip',
+        run: () => { conflictMode = 'skip'; } },
+      { id: 'c3', label: '同名时保留两者', on: conflictMode === 'keepboth',
+        run: () => { conflictMode = 'keepboth'; } },
+      { id: 'l2', line: true },
+      { id: 'z1', label: '放大', hint: 'Ctrl+滚轮上', icon: '&#xE8A3', run: () => post({ cmd: 'zoom', delta: 1 }) },
+      { id: 'z2', label: '缩小', hint: 'Ctrl+滚轮下', icon: '&#xE71F', run: () => post({ cmd: 'zoom', delta: -1 }) },
+      { id: 'z3', label: '重置缩放', hint: 'Ctrl+0', icon: '&#xE777', run: () => post({ cmd: 'zoom', delta: 0 }) }
+    ], e.currentTarget);
+  };
+  /* NOTE: the outside-close listener lives with menu() above. Do not add a second
+     one here - a duplicate unconditionally closing the menu is exactly what broke
+     the "click the button again to collapse" behaviour. */
+
+  /* ------------------------------------------------------- toolbar */
+  document.querySelectorAll('.btn[data-act]').forEach(b => b.onclick = () => {
+    const a = b.dataset.act, paths = [...selected];
+    if (a === 'refresh') return post({ cmd: 'refresh' });
+    if (a === 'files' || a === 'explorer') return post({ cmd: 'openWith', how: a });
+    if (a === 'restoreAll') return post({ cmd: 'restoreAll' });
+    if (a === 'empty') return post({ cmd: 'empty' });
+    if (a === 'restore')   { if (selected.size) post({ cmd: 'restore',   paths }); return; }
+    if (a === 'restoreTo') { if (selected.size) post({ cmd: 'restoreTo', paths, mode: conflictMode }); return; }
+    if (a === 'copyTo')    { if (selected.size) post({ cmd: 'copyTo',    paths }); return; }
+    if (a === 'delete')    { if (selected.size) post({ cmd: 'delete',    paths }); return; }
+  });
+
+  /* ------------------------------------------------- type filter menu */
+  const KINDS = [
+    ['',        '全部类型'],
+    ['image',   '图片'],
+    ['video',   '视频'],
+    ['audio',   '音频'],
+    ['doc',     '文档'],
+    ['archive', '压缩包'],
+    ['code',    '代码 / 脚本'],
+    ['folder',  '文件夹'],
+    ['other',   '其他']
+  ];
+
+  $('btnType').onclick = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const counts = {};
+    items.forEach(it => { const k = kindOf(it); counts[k] = (counts[k] || 0) + 1; });
+
+    menu(r.left, r.bottom + 6, KINDS.map(k => ({
+      id: 'k-' + (k[0] || 'all'),
+      label: k[1],
+      // showing how many items each kind holds is the useful bit a plain list lacks
+      hint: k[0] ? String(counts[k[0]] || 0) : String(items.length),
+      on: kindFilter === k[0],
+      run: () => {
+        kindFilter = k[0];
+        $('typeLabel').textContent = k[1];
+        $('btnType').classList.toggle('on', kindFilter !== '');
+        save();
+        render();
+      }
+    })), e.currentTarget);
+  };
+
+  $('btnDetails').onclick = () => {
+    showDetails = !showDetails;
+    save();
+    render();
+  };
+
+  /* ------------------------------------------------------- preferences */
+  function save() {
+    try {
+      localStorage.setItem('rbprefs', JSON.stringify({
+        showDetails: showDetails,
+        showCheckboxes: showCheckboxes,
+        density: document.body.dataset.density,
+        conflictMode: conflictMode
+      }));
+    } catch (err) { }
+  }
+
+  function load() {
+    try {
+      const p = JSON.parse(localStorage.getItem('rbprefs') || '{}');
+      if (typeof p.showDetails === 'boolean') showDetails = p.showDetails;
+      if (typeof p.showCheckboxes === 'boolean') showCheckboxes = p.showCheckboxes;
+      if (p.density) document.body.dataset.density = p.density;
+      if (p.conflictMode) conflictMode = p.conflictMode;
+    } catch (err) { }
+  }
+
+  load();
+
+  $('q').oninput = e => { filter = e.target.value.trim(); render(); };
+
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'F5') { e.preventDefault(); post({ cmd: 'refresh' }); }
+    else if (e.key === 'Delete') { e.preventDefault(); if (selected.size) post({ cmd: 'delete', paths: [...selected] }); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (selected.size) post({ cmd: 'restore', paths: [...selected] }); }
+    else if (e.key === 'Escape') closeMenu();
+    else if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault(); view.forEach(v => selected.add(v.path)); render();
+    }
+    else if (e.ctrlKey && e.key.toLowerCase() === 'f') { e.preventDefault(); $('q').focus(); }
+    else if (e.ctrlKey && (e.key === '0' || e.key === '=' || e.key === '-' || e.key === '+')) {
+      e.preventDefault();
+      post({ cmd: 'zoom', delta: e.key === '0' ? 0 : (e.key === '-' ? -1 : 1) });
+    }
+  });
+
+  window.chrome.webview.addEventListener('message', ev => {
+    const m = ev.data;
+    if (m.type === 'items') {
+      items = m.items || [];
+      if (m.emptyIcon) $('emptyIcon').src = m.emptyIcon;
+      const alive = new Set(items.map(i => i.path));
+      [...selected].forEach(p => { if (!alive.has(p)) selected.delete(p); });
+      previewPath = ''; previewData = ''; previewState = 'none';
+      if (!loaded) { loaded = true; animateRows = true; }   // stagger the first paint
+      render();
+    } else if (m.type === 'icons') {
+      // second pass: swap the placeholders for the real icons in place, so the
+      // rows are not re-rendered (and therefore not re-animated)
+      const map = m.map || {};
+      items.forEach(i => { if (map[i.path]) i.icon = map[i.path]; });
+      document.querySelectorAll('.row').forEach(row => {
+        const data = map[decodeURIComponent(row.dataset.path)];
+        if (!data) return;
+        const cell = row.querySelector('.name');
+        if (!cell) return;
+        const ph = cell.querySelector('.iconph');
+        const img = cell.querySelector('img');
+        if (ph) {
+          const fresh = document.createElement('img');
+          fresh.src = data;
+          fresh.alt = '';
+          cell.replaceChild(fresh, ph);
+        } else if (img) {
+          img.src = data;
+        }
+      });
+      if (previewItem && map[previewItem.path]) {
+        previewItem.icon = map[previewItem.path];
+        applyPreview();
+      }
+    } else if (m.type === 'preview') {
+      if (m.path !== previewPath) return;          // selection moved on
+      previewData = m.data || '';
+      previewState = previewData ? 'ready' : 'none';
+      applyPreview();
+    }
+  });
+
+  render();          // paint the skeleton immediately, before the host replies
+  post({ cmd: 'ready' });
+</script>
+</body>
+</html>
