@@ -66,6 +66,39 @@ internal static class Program
             if (string.Equals(a, flag, StringComparison.OrdinalIgnoreCase)) return true;
         return false;
     }
+
+    /// <summary>
+    /// The app renders its UI with WebView2, so the Evergreen Runtime has to be
+    /// present. It ships with Windows 11 and current Windows 10, but a clean or
+    /// heavily trimmed install can lack it - in that case the app would only show
+    /// an error. Detect it up front and point the user at Microsoft's installer.
+    /// </summary>
+    internal static bool WebView2RuntimeInstalled()
+    {
+        string[] keys = new string[]
+        {
+            @"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+            @"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+        };
+        foreach (string sub in keys)
+        {
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sub))
+                {
+                    if (k != null)
+                    {
+                        string pv = k.GetValue("pv") as string;
+                        if (!string.IsNullOrEmpty(pv)) return true;
+                    }
+                }
+            }
+            catch { }
+        }
+        return false;
+    }
+
+    internal const string WebView2DownloadUrl = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
 }
 
 internal static class Installer
@@ -102,6 +135,12 @@ internal static class Installer
 
     internal static void Install(string dir, bool desktopShortcut, bool takeOverRecycleBin, Action<string> log)
     {
+        if (!Program.WebView2RuntimeInstalled())
+        {
+            Say(log, "提示：未检测到 WebView2 运行时，程序可能无法显示界面。" +
+                     "请安装微软官方组件：" + Program.WebView2DownloadUrl);
+        }
+
         Say(log, "正在解压文件…");
         Directory.CreateDirectory(dir);
 
@@ -399,6 +438,23 @@ internal sealed class SetupForm : Form
         _status.AutoSize = true;
         _status.Location = new Point(28, 192);
         Controls.Add(_status);
+
+        // The app needs the WebView2 Evergreen Runtime. It ships with Windows 11,
+        // but say something useful instead of letting the app fail later.
+        if (!Program.WebView2RuntimeInstalled())
+        {
+            var warn = new LinkLabel();
+            warn.Text = "未检测到 WebView2 运行时 —— 点此安装（微软官方，装完再运行本程序）";
+            warn.AutoSize = true;
+            warn.LinkColor = Color.FromArgb(255, 170, 110);
+            warn.ActiveLinkColor = Color.FromArgb(255, 138, 61);
+            warn.Location = new Point(28, 170);
+            warn.LinkClicked += delegate
+            {
+                try { Process.Start(Program.WebView2DownloadUrl); } catch { }
+            };
+            Controls.Add(warn);
+        }
 
         _bar.Location = new Point(28, 216);
         _bar.Size = new Size(404, 6);
