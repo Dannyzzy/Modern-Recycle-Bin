@@ -4,6 +4,7 @@
 # v1.0.0 release with the installer and the portable zip attached.
 #
 # Run it from the repository root, or let the assistant run it.
+# Requires: gh signed in (Setup-GitHub.cmd or Login-With-Token.cmd).
 
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
@@ -33,7 +34,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host '== push =='
 Push-Location $root
 & git remote remove origin 2>$null | Out-Null
-& git remote add origin "https://github.com/$owner/$repo.git"
+# SSH is used deliberately: on this network github.com over HTTPS is blocked
+# while the SSH channel (via ssh.github.com:443) stays reachable.
+& git remote add origin "git@github.com:$owner/$repo.git"
 # github.com is intermittently unreachable from this network - retry.
 for ($i = 1; $i -le 6; $i++) {
     & git push -u origin HEAD 2>&1 | Write-Host
