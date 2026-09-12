@@ -110,3 +110,23 @@ build.cmd
 ## 许可证
 
 [MIT](LICENSE) · 第三方组件见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
+
+---
+
+## ⚠️ 安装前须知
+
+### 首次运行会有蓝色警告框，这是正常的
+
+程序**没有购买代码签名证书**，所以 Windows 会提示"Windows 已保护你的电脑"。
+点 **更多信息** → **仍要运行** 即可 ✔
+想完全避免，可用 `build.cmd` 从源码自行编译 ✔
+
+### 不需要管理员权限
+
+程序装在 `%LOCALAPPDATA%\ModernRecycleBin`，注册表只写当前用户 ✔
+卸载运行安装目录里的 `Uninstall.cmd`，桌面回收站会自动恢复为系统默认 ✔
+
+### 系统要求
+
+- Windows 10 / 11（**64 位**）
+- WebView2 运行时（Windows 11 已内置；缺失时安装器会提示并给出官方下载链接）
