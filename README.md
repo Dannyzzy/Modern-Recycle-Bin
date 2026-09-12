@@ -39,6 +39,9 @@ Windows 自带的回收站有几个长期被诟病的问题：
 
 ### 方式一：一键安装（推荐）
 
+![installer](docs/screenshot-installer.png)
+
+
 1. 下载 [`ModernRecycleBinSetup.exe`](../../releases/latest)
 2. 双击运行 —— 无需管理员权限
 3. 勾选「让桌面上的回收站用它打开」，安装完成
