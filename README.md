@@ -1,130 +1,330 @@
-# Modern Recycle Bin
+<p align="center">
+  <img alt="Modern Recycle Bin" src="docs/hero.png" width="100%" />
+</p>
 
-**一个更现代、更快、更好用的 Windows 回收站。** —— 用 WebView2 + HTML/CSS 重写了回收站界面，
-提供 Windows 11 风格的观感，并补上了系统回收站一直缺失的实用功能。
+<p align="center">
+  <a href="https://github.com/Dannyzzy/Modern-Recycle-Bin/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Dannyzzy/Modern-Recycle-Bin?color=ff8a3d&label=release"></a>
+  <a href="https://github.com/Dannyzzy/Modern-Recycle-Bin/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Dannyzzy/Modern-Recycle-Bin/total?color=ff8a3d&label=downloads"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/Dannyzzy/Modern-Recycle-Bin?color=ff8a3d"></a>
+  <a href="#requirements"><img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6"></a>
+  <a href="https://github.com/Dannyzzy/Modern-Recycle-Bin/actions/workflows/build.yml"><img alt="Build" src="https://github.com/Dannyzzy/Modern-Recycle-Bin/actions/workflows/build.yml/badge.svg"></a>
+</p>
 
-> A modern, faster, better Recycle Bin for Windows 11 — built with WebView2 + HTML/CSS.
+<h1 align="center">Modern Recycle Bin</h1>
 
-![screenshot](docs/screenshot-main.png)
+<p align="center">
+  <b>A modern, faster, better Recycle Bin for Windows 11.</b><br/>
+  Restore files anywhere, copy them out, preview images — in a native Windows 11 look.
+</p>
+
+<h3 align="center">
+  <a href="#-installation">Installation</a>
+  <span> · </span>
+  <a href="#-usage">Usage</a>
+  <span> · </span>
+  <a href="#-performance">Performance</a>
+  <span> · </span>
+  <a href="#-how-it-works">How it works</a>
+  <span> · </span>
+  <a href="#-troubleshooting">Troubleshooting</a>
+  <span> · </span>
+  <a href="README.zh-CN.md">简体中文</a>
+</h3>
 
 ---
 
-## 为什么做这个
+## 🗑️ What is this?
 
-Windows 自带的回收站有几个长期被诟病的问题：
+Windows' built-in Recycle Bin has barely changed in fifteen years. It can only
+restore files to the place they came from, it cannot show you what is inside a
+file, and it cannot take a copy out without removing the original.
 
-| 系统回收站的问题 | Modern Recycle Bin |
-| --- | --- |
-| ❌ 只能还原到**原位置**，没法还原到别处 | ✅ **还原到…**：自选任意文件夹 |
-| ❌ 不能把文件**复制出来**（只能连根拔走） | ✅ **复制到…**：复制一份出去，原件保留 |
-| ❌ 看不到内容，只能靠文件名猜 | ✅ **图片缩略图预览**（选中即显示） |
-| ❌ 搜索慢、不能按类型找 | ✅ **按类型筛选**（图片/视频/音频/文档/压缩包/代码/文件夹）+ 实时搜索 |
-| ❌ 界面是十年前的样式 | ✅ **Windows 11 风格**：暗色主题、40px 行高、圆角悬停、流畅动效 |
-| ❌ 同名文件冲突处理含糊 | ✅ **覆盖 / 跳过 / 保留两者** 三种策略 |
-| ❌ 无法调整信息密度 | ✅ **舒适 / 紧凑** 两种行距 + **Ctrl+滚轮缩放** |
-| ❌ 清空后桌面图标有时不刷新 | ✅ 主动通知 shell，图标始终同步 |
+**Modern Recycle Bin** replaces that interface with one written in HTML/CSS and
+rendered by WebView2 inside its own window, which makes a real Windows 11 look
+achievable — while all the file work still happens in native C# talking to the
+shell. It opens in a fraction of a second and keeps the Recycle Bin icon in your
+taskbar.
 
-## 功能一览
+> It is **not** a file manager and it does not touch anything outside the
+> Recycle Bin. Installing it is a per-user, two-click operation, and uninstalling
+> puts the system default straight back.
 
-- **还原**：还原到原位置 / 还原到任意文件夹 / 还原全部
-- **删除**：永久删除选中项 / 清空回收站（走系统 API，桌面图标同步更新）
-- **复制到…**：把文件复制出来而不从回收站移除
-- **详情面板**：类型、大小、原位置、删除时间、修改时间，图片显示缩略图
-- **筛选与排序**：按类型筛选、点列头排序、实时搜索（名称/原位置/类型）
-- **右键菜单**：还原 / 还原到… / 复制到… / 打开原位置 / 属性 / 复制路径 / 永久删除
-- **快捷键**：`Enter` 还原、`Delete` 删除、`Ctrl+A` 全选、`Ctrl+F` 搜索、`F5` 刷新、`Ctrl+0/+/-` 缩放
-- **未选中任何项时**显示"回收站为空"，与系统一致
+## ✨ Features
 
-## 安装
+| | Feature | What it means |
+|---|---|---|
+| 📂 | **Restore anywhere** | The stock Recycle Bin can only put a file back where it came from. Here you can pick any folder. |
+| 📋 | **Copy out** | Copy a file out of the bin and **keep the original where it is** — the stock bin cannot do this at all. |
+| 🖼️ | **Image previews** | Select a picture and see a thumbnail on the right, instead of restoring it just to find out what it was. |
+| 🎛️ | **Filter by type** | Images / video / audio / documents / archives / code / folders — plus live search over name, original path and type. |
+| 🔀 | **Conflict handling** | When a file with the same name already exists, choose **overwrite**, **skip**, or **keep both**. |
+| 🌗 | **Windows 11 styling** | Fluent dark theme, 40 px rows, soft rounded hover and selection, smooth motion, comfortable/compact density. |
+| ⌨️ | **Built for the keyboard** | `Enter` restore · `Delete` purge · `Ctrl+A` select all · `Ctrl+F` search · `F5` refresh · `Ctrl+0/+/-` zoom. |
+| ⚡ | **Instant** | The window appears in about 100 ms and the full list is rendered in about 300 ms. |
+| 📌 | **Keeps its icon** | Because the window belongs to this app, the taskbar shows the Recycle Bin icon — never a browser or Explorer icon. |
 
-### 方式一：一键安装（推荐）
+### Compared with the built-in Recycle Bin
 
-![installer](docs/screenshot-installer.png)
+| Capability | Windows built-in | Modern Recycle Bin |
+|---|:---:|:---:|
+| Restore to the original location | ✅ | ✅ |
+| **Restore to a folder you choose** | ❌ | ✅ |
+| **Copy a file out, keeping the original** | ❌ | ✅ |
+| **Thumbnail preview of images** | ❌ | ✅ |
+| Search / filter by file type | ⚠️ limited | ✅ |
+| Sort by clicking column headers | ✅ | ✅ |
+| Choose how name conflicts are handled | ❌ | ✅ |
+| Dark, Windows 11-styled interface | ❌ | ✅ |
+| Adjustable row density and zoom | ❌ | ✅ |
+| Works without administrator rights | — | ✅ |
 
+## 📸 Screenshots
 
-1. 下载 [`ModernRecycleBinSetup.exe`](../../releases/latest)
-2. 双击运行 —— 无需管理员权限
-3. 勾选「让桌面上的回收站用它打开」，安装完成
+**The main window.** The details pane on the right shows the picture itself, plus
+type, size, original location and timestamps.
 
-安装器会把程序放到 `%LOCALAPPDATA%\ModernRecycleBin`，并做两件事（都可选、都可撤销）：
+![Main window](docs/screenshot-main.png)
 
-- 创建桌面快捷方式
-- 让桌面上的「回收站」双击后用本程序打开（写入**当前用户**注册表）
+**The installer.** A single file, no administrator rights, and every change it
+makes can be undone from the same place.
 
-想卸载：运行安装目录里的 `Uninstall.cmd`，或在「设置 → 应用」里卸载。
-卸载会**自动把桌面回收站恢复为系统默认**。
+<p align="center">
+  <img alt="Installer" src="docs/screenshot-installer.png" width="460" />
+</p>
 
-### 方式二：绿色便携版
+## 🚀 Installation
 
-下载 Release 里的 `ModernRecycleBin-portable.zip`，解压后直接运行 `RecycleBin.exe`。
-不写注册表、不留痕迹，删掉文件夹即卸载。
+### Option A — Installer (recommended)
 
-### 系统要求
+1. Download **`ModernRecycleBinSetup.exe`** from the
+   [latest release](https://github.com/Dannyzzy/Modern-Recycle-Bin/releases/latest).
+2. Run it. No administrator rights are required.
+3. Tick what you want:
+   - **Create a desktop shortcut**
+   - **Let the desktop Recycle Bin open with this app** — this writes one
+     per-user registry key, and it is completely undone on uninstall.
+4. Done. Double-click the Recycle Bin on your desktop to try it.
 
-- Windows 10 / 11（64 位）
-- **WebView2 运行时** —— Windows 11 与较新的 Windows 10 已内置；
-  若提示缺失，装一下微软官方组件即可：<https://go.microsoft.com/fwlink/p/?LinkId=2124703>
+**To uninstall:** run `Uninstall.cmd` inside the install folder, or
+`%LOCALAPPDATA%\ModernRecycleBin-Uninstall.exe`. Uninstalling restores the
+default Recycle Bin automatically and removes everything it created.
 
-## 技术实现
+### Option B — Portable
 
-- **界面**：WebView2 承载 HTML/CSS/JS，宿主是我们自己的 WinForms 窗口
-  （因此任务栏图标依然是回收站图标，而不是浏览器图标）
-- **数据与操作**：C# 直接解析 `$Recycle.Bin` 里的 `$R`（数据）/ `$I`（元数据）配对
-  - 还原、删除、清空都成对处理并在完成后**校验**
-  - 每次操作后清理残留的孤儿 `$I`，避免"回收站空了但桌面图标还是满的"
-  - 清空走 `SHEmptyRecycleBin`，让 shell 自己执行，桌面图标才会同步
-- **图标**：从 shell 的 256px（jumbo）图标列表取图后缩放；窗口图标自建**多尺寸 ICO**
-  （含 20/24/40 等 DPI 对应尺寸），保证标题栏与任务栏都清晰
-- **启动优化**：WebView2 运行时与窗口创建并行启动；页面用 `NavigateToString` 直接注入
-  （避免虚拟域名走网络栈导致的 2 秒延迟）。实测窗口 **~100ms** 出现、**~300ms** 完整渲染
+Download **`ModernRecycleBin-portable.zip`**, unpack it wherever you like, then
+run `RecycleBin.exe`. Nothing is written to the registry — delete the folder and
+it is gone.
 
-## 从源码编译
+<a name="requirements"></a>
+### Requirements
 
-只需要 .NET Framework 自带的编译器，**不需要安装任何 SDK**：
+- **Windows 10 or 11, 64-bit**
+- **WebView2 Runtime** — preinstalled on Windows 11 and current Windows 10
+  builds. If it is missing, the installer says so and links you to Microsoft's
+  official download; nothing else is needed.
+
+## 📖 Usage
+
+The interface follows the same mental model as File Explorer, so there is nothing
+new to learn:
+
+| Action | How |
+|---|---|
+| See what a file is | Click it — the details pane fills in, and images show a preview |
+| Restore to where it came from | Double-click the row, press `Enter`, or click **Restore** |
+| Restore somewhere else | Click **Restore to…** and choose any folder |
+| Keep a copy without removing it | Right-click → **Copy to…** |
+| Delete permanently | `Delete`, or right-click → **Delete** |
+| Empty the whole bin | **Empty Recycle Bin** (the desktop icon updates too) |
+| Find something | Type in the search box, or use the **All types** filter |
+| Sort | Click any column header, or use the sort button in the toolbar |
+| Change rows or text size | **View** → Comfortable / Compact, or hold `Ctrl` and scroll |
+
+**Right-click menu:** Restore · Restore to… · Copy to… · Open original location ·
+Properties · Copy original path · Delete permanently.
+
+### How it behaves with Explorer
+
+By default the app only *adds* an entry point: the desktop Recycle Bin opens it,
+and the normal empty/full icon state keeps updating because the app tells the
+shell whenever the bin changes. Everything else — right-click "Empty Recycle
+Bin" on the desktop, deleting files into the bin, Explorer's own Recycle Bin —
+keeps working exactly as before.
+
+## ⚡ Performance
+
+Startup was the hardest part to get right. Measured on the development machine
+(Windows 11, 125 % display scaling, 22 items in the bin):
+
+| Stage | Time |
+|---|---|
+| Window visible | **~100 ms** |
+| WebView2 controller ready | ~175 ms |
+| **Page rendered** | **~300 ms** |
+
+What made that possible, and what was measured along the way:
+
+- **Loading the UI by content, not by URL.** Navigating to a virtual host name
+  (`https://something/index.html`) made the WebView walk the full network stack,
+  including proxy auto-discovery, which cost **2299 ms**. Passing the HTML
+  straight to the control (`NavigateToString`) dropped that to **301 ms** — two
+  seconds saved on every launch.
+- **Starting the WebView2 runtime in parallel with building the window**, instead
+  of after it.
+- **No black flash.** The WebView stays hidden until the page has painted, so the
+  window shows its own themed background and a brief "Opening Recycle Bin…"
+  message instead of a black rectangle while the runtime boots.
+- **The list is sent before the icons.** Icons are produced afterwards on a
+  dedicated thread and pushed as a second message that patches the rows in place.
+  Icons depend on the shell's system image list, which is **not thread-safe** —
+  generating them concurrently made most of them fail at random.
+- **Full-resolution icons.** Row and details icons come from the shell's 256 px
+  (jumbo) image list and are downscaled, rather than upscaling a 16 px icon. The
+  window icon is a hand-built **multi-size ICO** (16/32/48/256 plus 20/24/40,
+  which DPI scaling actually asks for), so the title bar is never resampled.
+- **The desktop icon can no longer go stale.** The bin is modified by writing the
+  `$R`/`$I` pairs directly, so the app verifies every deletion, sweeps up orphaned
+  metadata, and empties through `SHEmptyRecycleBin` — the only way Explorer's
+  desktop icon follows along.
+
+## 🔧 How it works
+
+```mermaid
+flowchart LR
+    USER(["Double-click<br/>the Recycle Bin"])
+
+    subgraph APP["Modern Recycle Bin"]
+        HOST["WinForms host window<br/><i>owns the taskbar icon</i>"]
+        WEB["WebView2<br/><i>HTML / CSS / JS interface</i>"]
+        CORE["C# core<br/><i>enumerate · restore · purge</i>"]
+    end
+
+    subgraph SHELL["Windows Shell"]
+        NS["Recycle Bin namespace"]
+        BIN["$Recycle.Bin<br/>$R payload · $I metadata"]
+    end
+
+    USER --> HOST
+    HOST --> WEB
+    WEB <-->|"postMessage (JSON)"| CORE
+    CORE <-->|"Shell.Application"| NS
+    CORE <-->|"read / write pairs"| BIN
+    CORE -->|"SHEmptyRecycleBin"| NS
+    CORE -->|"SHChangeNotify"| NS
+```
+
+**Where each part lives**
+
+| File | Role |
+|---|---|
+| `src/RbWeb.cs` | The host: window, WebView2 setup, shell access, all file operations |
+| `src/ui/index.html` | The whole interface — layout, styling and interaction |
+| `installer/Setup.cs` | The single-file installer and uninstaller |
+| `lib/` | Microsoft's official WebView2 SDK (`net462` build + x64 native loader) |
+
+**Why the UI is HTML.** Getting a genuinely Windows 11 look out of classic
+WinForms controls means owner-drawing every pixel — and even then the list
+selection is a fixed system blue that cannot be restyled. HTML and CSS give the
+real thing: correct type sizes, sub-pixel text rendering, rounded surfaces and
+Fluent motion.
+
+**Why the host is our own window.** Hosting the same UI in a browser would hand
+the taskbar a browser icon. Because the WebView lives inside a WinForms window
+belonging to this application, the taskbar and Alt-Tab show the Recycle Bin icon.
+
+**Why the file operations are native C#.** Reading `$Recycle.Bin` directly means
+the app knows exactly what it is doing: it parses the `$I` metadata for the
+original path and deletion time, pairs it with the `$R` payload, and verifies
+every move. It never shells out to a verb that might block on an invisible
+dialog.
+
+## 🛠️ Building from source
+
+You need nothing but the .NET Framework compiler that ships with Windows.
 
 ```cmd
+git clone https://github.com/Dannyzzy/Modern-Recycle-Bin.git
+cd Modern-Recycle-Bin
 build.cmd
 ```
 
-脚本会：
-
-1. 用 `csc.exe` 编译 `src/RbWeb.cs`
-2. 组装 `dist/`（可运行的便携版）
-3. 打包 payload 并生成单文件安装器 `dist/ModernRecycleBinSetup.exe`
-
-依赖的 `Microsoft.Web.WebView2` 官方 SDK 已随仓库放在 `lib/`（含其许可证）。
-
-## 项目结构
+The script compiles `src/RbWeb.cs`, assembles the portable build, and produces all
+three release artefacts in `dist/`:
 
 ```
-src/RbWeb.cs              宿主程序（C#，界面逻辑与文件操作）
-src/ui/index.html         界面（HTML/CSS/JS，自绘列表与详情面板）
-installer/Setup.cs        单文件安装器 / 卸载器
-lib/                      WebView2 官方 SDK（net462 + x64 原生库）
-build.cmd                 一键构建
-dist/                     构建产物
-docs/                     截图
+dist\RecycleBin.exe                  portable application
+dist\ModernRecycleBinSetup.exe       single-file installer
+dist\ModernRecycleBin-portable.zip   portable zip
 ```
 
-## 已知限制
+A GitHub Actions workflow (`.github/workflows/build.yml`) runs the same script on
+every push.
 
-- 回收站里的文件在 `$Recycle.Bin` 下是 `$R` 内部名，因此**不提供"剪切"**
-  （自己实现剪切会粘出错误的文件名；系统靠内部处理才正确）
-- 还原/删除依赖直接操作 `$R`/`$I`，遇到权限异常的文件会跳过并在结果里报告
+## ❓ Troubleshooting
 
-## 许可证
+<details>
+<summary><b>The window is blank, or says WebView2 is missing</b></summary>
 
-本项目代码采用 **MIT** 许可。第三方组件许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+The app renders its interface with the WebView2 Runtime. Windows 11 and current
+Windows 10 include it. If it is absent, install Microsoft's official Evergreen
+Bootstrapper and run the app again:
+<https://go.microsoft.com/fwlink/p/?LinkId=2124703>
+</details>
 
----
+<details>
+<summary><b>Windows SmartScreen warns me about the installer</b></summary>
 
-## English
+The release binaries are not code-signed (a signing certificate costs money for
+an open-source project). Choose **More info → Run anyway**. You can also build
+the binaries yourself with `build.cmd` and use those.
+</details>
 
-A modern Recycle Bin for Windows, built with WebView2 + HTML/CSS inside its own
-WinForms window (so the taskbar keeps the Recycle Bin icon).
+<details>
+<summary><b>Does this delete anything by itself?</b></summary>
 
-Highlights: restore to any folder, copy files out without removing them, image
-thumbnails, type filter, Windows 11 dark styling, per-user install with no
-admin rights, and a clean uninstall that restores the system default.
+No. The app never touches anything outside the Recycle Bin, and it never empties
+or deletes without a confirmation dialog. Restoring moves files back to their
+original location; deleting removes them permanently, exactly as the system
+Recycle Bin would.
+</details>
 
-See the sections above for install and build instructions.
+<details>
+<summary><b>How do I get the default Recycle Bin back?</b></summary>
+
+Run `Uninstall.cmd` in the install folder. It removes the per-user registry
+redirect, deletes the desktop shortcut, and deletes the program folder. The
+desktop Recycle Bin immediately behaves as it originally did.
+</details>
+
+<details>
+<summary><b>Why can't I cut a file?</b></summary>
+
+Inside `$Recycle.Bin` a file is stored under an internal `$R…` name. A home-made
+cut would put that internal name on the clipboard and paste it under the wrong
+name. Explorer can do it because the shell handles the copy itself — so this app
+deliberately offers restore and copy-out instead.
+</details>
+
+## 🧭 Known limitations
+
+- **No "Cut".** See the explanation above.
+- **Items the current user cannot read** (for example another account's bin) are
+  skipped, and the app reports them rather than failing silently.
+- **Videos are not previewed.** Only images get a thumbnail, by design.
+- The interface is currently **Simplified Chinese**; English strings are on the
+  way.
+
+## 🤝 Contributing
+
+Issues and pull requests are welcome. If you have found a bug, please include
+your Windows version, the steps to reproduce it, and — when relevant — what the
+Recycle Bin contained at the time.
+
+## 📄 License
+
+Released under the [MIT License](LICENSE).
+
+Bundled third-party components and their licenses are listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). No files from Windows, Explorer
+or any third-party application are redistributed; the Recycle Bin icon is read
+from the system at runtime.

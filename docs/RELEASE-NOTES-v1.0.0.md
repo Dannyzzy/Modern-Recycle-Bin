@@ -1,67 +1,33 @@
-# Modern Recycle Bin 1.0.0
+## Modern Recycle Bin 1.0.0
 
-第一个公开版本。一个用 **WebView2 + HTML/CSS** 重写的 Windows 回收站，外观是 Windows 11 风格，
-并补上了系统回收站长期缺失的实用功能。
+First public release — a Recycle Bin for Windows 11 rebuilt with **WebView2 + HTML/CSS**,
+with the features the built-in one has never had.
 
-## 亮点
+### What's new
 
-- **还原到任意位置** —— 系统回收站只能还原到原位置，这里可以自选文件夹
-- **复制到…** —— 把文件复制出来而不从回收站移除（系统完全没有这个能力）
-- **图片缩略图预览** —— 选中即在右侧显示，不用先还原再打开
-- **按类型筛选 + 实时搜索 + 点列头排序**
-- **Windows 11 风格界面** —— 暗色主题、40px 行高、圆角悬停、流畅动效、可切换舒适/紧凑行距
-- **同名冲突三策略** —— 覆盖 / 跳过 / 保留两者
-- **秒开** —— 窗口约 100ms 出现，完整列表约 300ms（WebView2 运行时与窗口并行启动）
-- **任务栏图标仍是回收站** —— 宿主是我们自己的窗口，不是浏览器
+- **Restore anywhere** — pick any folder instead of only the original location
+- **Copy out** — take a copy of a file while keeping the original in the bin
+- **Image previews** — see a thumbnail in the details pane before restoring
+- **Filter by type** and search over name, original path and type
+- **Conflict handling** — overwrite, skip, or keep both
+- **Windows 11 styling** — Fluent dark theme, 40 px rows, rounded hover states, smooth motion
+- **Comfortable / compact density** and `Ctrl`+scroll zoom
+- **Opens in about 300 ms** — window visible in ~100 ms
 
-## 安装
+### Install
 
-**方式一：一键安装（推荐）**
+1. Download `ModernRecycleBinSetup.exe` below and run it — **no administrator rights needed**
+2. Optionally create a desktop shortcut and let the desktop Recycle Bin open with this app
+3. To remove it later, run `Uninstall.cmd` in the install folder; the system default is restored automatically
 
-下载 `ModernRecycleBinSetup.exe` 双击运行。免管理员权限，可勾选：
+Prefer no installer? Grab `ModernRecycleBin-portable.zip` and just run `RecycleBin.exe`.
 
-- 创建桌面快捷方式
-- 让桌面上的「回收站」用它打开（写入当前用户注册表，卸载自动还原）
+### Requirements
 
-**方式二：绿色便携版**
+Windows 10 or 11, 64-bit. The WebView2 Runtime is preinstalled on Windows 11; if it is
+missing the installer tells you and links to Microsoft's official download.
 
-下载 `ModernRecycleBin-portable.zip`，解压后运行 `RecycleBin.exe`。不写注册表，删文件夹即卸载。
+### Notes
 
-**卸载**：运行安装目录里的 `Uninstall.cmd`。卸载会自动把桌面回收站恢复为系统默认。
-
-## 系统要求
-
-- Windows 10 / 11（64 位）
-- WebView2 运行时（Windows 11 与较新的 Win10 已内置；缺失时装微软官方组件：
-  <https://go.microsoft.com/fwlink/p/?LinkId=2124703>）
-
-## 技术要点
-
-- 界面跑在 WebView2 里，但宿主是自己的 WinForms 窗口 —— 因此任务栏保留回收站图标
-- 直接操作 `$Recycle.Bin` 下的 `$R`（数据）/ `$I`（元数据）配对，每次操作都成对处理并校验
-- 每次操作后清理孤儿 `$I`，避免"回收站空了但桌面图标还是满的"
-- 清空走 `SHEmptyRecycleBin`，让 shell 亲自执行，桌面图标才会同步
-- 窗口图标自建**多尺寸 ICO**（含 20/24/40 等 DPI 对应尺寸），标题栏与任务栏都清晰
-- 页面用 `NavigateToString` 直接注入，避免虚拟域名走网络栈导致的 2 秒延迟
-
-## 从源码构建
-
-只需要 Windows 自带的 .NET Framework 编译器，无需安装任何 SDK：
-
-```cmd
-build.cmd
-```
-
-## 已知限制
-
-- 不提供"剪切"：回收站内文件是 `$R` 内部名，自行实现会粘出错误的文件名
-- 遇到权限异常的文件会跳过并在结果里报告
-
-## 校验
-
-```
-ModernRecycleBinSetup.exe         253 KB
-ModernRecycleBin-portable.zip     241 KB
-```
-
-（作者签名：无。本版本未做代码签名，首次运行可能触发 SmartScreen 提示，选择"仍要运行"即可。）
+- The binaries are not code-signed, so SmartScreen may ask you to confirm — choose **More info → Run anyway**, or build from source with `build.cmd`
+- The interface is currently Simplified Chinese; English strings are planned
