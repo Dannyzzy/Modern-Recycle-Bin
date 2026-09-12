@@ -1,5 +1,6 @@
 dist/
 build/
+tools/
 *.log
 Thumbs.db
 desktop.ini
