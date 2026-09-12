@@ -80,6 +80,18 @@ taskbar.
 
 ## 📸 Screenshots
 
+**Every control at a glance** — the numbers match the list on the right.
+
+![Annotated interface](docs/screenshot-annotated.png)
+
+### Quick start
+
+1. **Look** — click any file; pictures show a preview on the right.
+2. **Get it back** — double-click a row to restore it, or press **Restore to…**
+   to put it somewhere else.
+3. **Keep a copy** — right-click → **Copy to…** takes a copy and leaves the
+   original in the bin.
+
 **The main window.** The details pane on the right shows the picture itself, plus
 type, size, original location and timestamps.
 
