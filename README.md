@@ -127,6 +127,31 @@ Download **`ModernRecycleBin-portable.zip`**, unpack it wherever you like, then
 run `RecycleBin.exe`. Nothing is written to the registry — delete the folder and
 it is gone.
 
+### If github.com is blocked
+
+On some networks `github.com` never answers — the download times out at 0 bytes —
+while the release files themselves are fine. Two ways around it:
+
+**One-click.** Paste this into PowerShell; it picks a working channel by itself,
+downloads the installer and starts it:
+
+```powershell
+irm https://ghfast.top/https://raw.githubusercontent.com/Dannyzzy/Modern-Recycle-Bin/main/Install-ModernRecycleBin.cmd -OutFile "$env:TEMP\mrb-install.cmd"; & "$env:TEMP\mrb-install.cmd"
+```
+
+The download goes through PowerShell rather than curl on purpose: an accelerator
+sets a Windows proxy that **curl ignores**, so a machine where the browser opens
+GitHub can still fail to download. The script falls back to the
+**[ghfast.top](https://ghfast.top)** mirror, checks that what arrived really is
+the installer, and prints every address it tried when both channels fail — it
+never fails quietly.
+
+**By hand.** Open the mirror copy of the release page in a browser:
+
+```
+https://ghfast.top/https://github.com/Dannyzzy/Modern-Recycle-Bin/releases/latest
+```
+
 <a name="requirements"></a>
 ### Requirements
 

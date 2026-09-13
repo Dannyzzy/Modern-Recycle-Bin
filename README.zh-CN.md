@@ -37,6 +37,27 @@
 
 **卸载**：运行安装目录里的 `Uninstall.cmd`，桌面回收站会自动恢复为系统默认。
 
+### 如果 github.com 打不开
+
+有些网络下 `github.com` 根本不响应 —— 下载卡在 0 字节超时，但**发布文件本身是好的**。两种绕法：
+
+**一键安装。** 把下面这行粘进 PowerShell，它会自己找到能用的通道，下载并启动安装器：
+
+```powershell
+irm https://ghfast.top/https://raw.githubusercontent.com/Dannyzzy/Modern-Recycle-Bin/main/Install-ModernRecycleBin.cmd -OutFile "$env:TEMP\mrb-install.cmd"; & "$env:TEMP\mrb-install.cmd"
+```
+
+下载刻意走 PowerShell 而不是 curl：加速器会设置 Windows 系统代理，而 **curl 不读系统代理** ——
+于是会出现「浏览器能打开 GitHub、下载却失败」的情况。脚本会先试直连，失败自动切
+**[ghfast.top](https://ghfast.top)** 镜像，并校验拿到的是不是真正的安装器；
+两条通道都失败时会把试过的地址全打印出来，**不会静默失败**。
+
+**手动下载。** 用浏览器打开镜像版发布页：
+
+```
+https://ghfast.top/https://github.com/Dannyzzy/Modern-Recycle-Bin/releases/latest
+```
+
 ## 使用
 
 | 操作 | 方法 |
