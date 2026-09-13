@@ -1,7 +1,7 @@
 # Correct GitHub status check (the earlier inline test mis-matched
 # "not logged into" because -match is case-insensitive).
 $root = Split-Path -Parent $PSScriptRoot
-$gh   = Join-Path $root 'tools\gh\bin\gh.exe'
+$gh   = Join-Path $root '..\tools\gh\bin\gh.exe'
 
 $out = & $gh auth status 2>&1 | Out-String
 if ($out -match 'Logged in to') {

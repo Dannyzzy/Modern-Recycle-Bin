@@ -7,3 +7,11 @@ desktop.ini
 .vs/
 *.user
 docs/ssh-public-key.txt
+
+# 凭据安全护栏：任何情况下都不要把令牌写进本目录的文件里。
+# 令牌只应存在于 Windows 凭据管理器（由 gh auth login 写入，系统加密）。
+*.token
+*.pat
+ghp_*
+.env
+credentials*.json

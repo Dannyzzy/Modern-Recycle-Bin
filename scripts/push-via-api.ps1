@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$gh   = Join-Path $root 'tools\gh\bin\gh.exe'
+$gh   = Join-Path $root '..\tools\gh\bin\gh.exe'
 $api  = "repos/$Owner/$Repo"
 
 if (-not (Test-Path $gh)) { throw "gh.exe not found at $gh" }

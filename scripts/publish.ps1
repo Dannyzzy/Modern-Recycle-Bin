@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
-$gh   = Join-Path $root 'tools\gh\bin\gh.exe'
+$gh   = Join-Path $root '..\tools\gh\bin\gh.exe'
 
 $repo   = 'Modern-Recycle-Bin'
 $desc   = 'A modern Recycle Bin for Windows 11 - restore anywhere, copy files out, image previews. Built with WebView2 + HTML/CSS.'
